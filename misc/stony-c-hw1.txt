@@ -1,0 +1,242 @@
+		CSE-376 (Spring 2016) Homework Assignment #1
+			  (Handout #2, revision 1)
+		   Due Sunday, February 28, 2016, 11:59pm
+	       (This assignment is worth 10% of your grade.)
+
+* PURPOSE:
+
+To become familiar with the C/Unix development environment and to write a
+portable C program that runs on several hosts and carefully checks for
+various error conditions.  To read and understand documentation about the
+use of C functions and system calls.
+
+Expected length of C program is 200-400 lines of code.
+
+
+* TASK:
+
+Write a C program named "cipher" that encrypts files, and runs on several
+machines.  Your program must be organized for build with a Makefile.  You
+will have to support two systems with DNS names: a-centos58 and a-freebsd82.
+We are going to checkout your code from GIT.  Then we will use that code to
+unpack, build, and test your program.  If we can not build your program by
+simply typing 'make' in your project directory, on (any machine) like so:
+
+	$ <checkout your code from git>
+	$ cd hw1-USER
+	$ make
+	$ ./cipher
+
+then you may not receive full credit for being able to build on that
+machine.  The "cipher" program has the following usage:
+
+	cipher [-devh] [-p PASSWD] infile outfile
+
+The program will prompt the user to enter a password (or pass-phrase), then
+read infile, and then produce outfile.  If the -e option is given, the
+program should encrypt infile onto outfile, using the supplied user
+password.  If the -d option is given, the reverse should happen: decrypt
+infile onto outfile, using the supplied password.  Either the -d or -e
+options (but not both) must be supplied (an exactly once).  Of course, if
+you use the same password to encrypt and then decrypt a file, you should get
+back the same exact file data you started with.
+
+For this assignment, you should use getpass(3) by default to input a
+password from the user.  However, as an optional method, you should support
+-p ARG where "ARG" is a password given on the command line (this will
+simplify grading for us).
+
+If the -h (help) option is given, the program should print a simple usage
+line on stderr and exit with a non-zero status code.  The usage/help output
+should also be given if the wrong number or types of arguments are given to
+the program.
+
+If the -v option is given, the program should print the version string of
+the program (which you can take from RCS auto-update variables such as
+$Revision$ or $Id$).
+
+All options should be processed using getopt(3).
+
+The file names given as input can be any kind of files: relative pathnames
+or absolute ones.  The input file must exist before the program can succeed.
+The output file may or may not exist: if it exists, it's OK to overwrite it
+but only if you won't damage the input file (i.e., the infile and outfile
+may be the same).
+
+As special names, if infile is "-", you should read from stdin.  If outfile
+is "-", you should output to stdout.  That way, you can use the cipher
+program as a "Unix filter" such as
+
+$ cat foo.in | ./cipher -d - foo.out
+or
+$ ./cipher -e foo.in - > foo.out
+
+The program should check for EVERY POSSIBLE ERROR that could occur BEFORE
+opening the input and output files and encrypting/decrypting the data.  In
+the case of a possible error, the program should print a detailed error
+message on stderr and exit with a non-zero status code.  This means that you
+should, for example, check that the input files are readable, that you have
+permission to read and/or write them (as needed), that neither is a
+directory, character/block special device, etc.  Other errors could
+occur, and it is your job to write the code that checks for all of those
+conditions.  (A good way to think about it is to inspect manual pages for
+the system calls that you use, and think to yourself "what else could go
+wrong when this function runs").  Some of the more complex error conditions
+for which you should check is running out of disk space or quota, or when the
+two file arguments use different names but actually point to the same file (do
+not try to encrypt/decrypt a file in place -- this may corrupt the file).
+
+Many of these preconditions can be checked using the stat(2) and lstat(2)
+system calls.  You can use the man program to find out programming details
+about these system calls.  For example "man 2 lstat."
+
+The program should copy data efficiently, using read(2) and write(2).  It
+should use the native OS's page size (see the l/stat() and getpagesize()
+functions) as the copy unit.  That means, you should allocate such a unit of
+memory, read the data from infile in such a size, run encrypt/decrypt on it,
+and then write it out in one such chunk.  Note that the end of the file will
+not always be a multiple of the native file system block size, so you're
+going to need to handle the copying of the last chunk of the file carefully.
+
+You should check return codes from all system calls that you call, such as
+read(), write(), open(), and close(), and handle them correctly.  In
+particular, you should carefully handle partial reads or partial writes.
+You should also handle copying a zero-length file.  You may NOT use regular
+libc functions such as fopen, fclose, fgets, or scanf.  Use system calls
+only (and fprintf/malloc/free)!
+
+Your code should be clean, well documented, properly styled and indented.
+
+Finally, you should write your code so it is portable.  You should have only
+one set of C source files which you can compile without changing them.  The
+code should compile on two different Unix systems, then run identically on
+both.  The two systems you should use for this assignment are
+a-centos58 and a-freebsd82.
+
+* USING BLOWFISH:
+
+You don't need to be an expert in security or encryption to do this
+assignment.  Part of what this assignment will teach you is how to work with
+someone else's code.  So I've given you a tarball with the C sources and
+headers for a particularly popular Cipher (an implementation of an
+encryption algorithm).  The tarball is accessible from the class Web site
+at:
+
+	http://www.cs.sunysb.edu/~ezk/cse376-s16/bf.tar.gz
+
+You should unpack this tarball into your ~/hw1-$USER/ directory, then edit
+the Makefile and cipher.c files there.  (Don't forget to to git add, commit,
+and push all of those source files.)  The file cipher.c gives you some code
+samples you can work with which show you how to use the Blowfish functions
+to encrypt or decrypt a chunk of data.  The cipher.c file won't compile: you
+have to rewrite and fix it as needed.
+
+
+* Makefile:
+
+The Makefile in bf.tar.gz is very simple.  Fix the Makefile to do the
+following:
+
+- use gcc
+
+- turn on compile flags -g -O2 -Wall -Werror
+
+- recompile the sources into individual .o files ONLY if the corresponding
+  .c file had changed.
+
+- [re]link the final executable "cipher" only if any of the corresponding .o
+  files had changed.
+
+- recompile any of the .c files if any of their dependent .h files (most are
+  included in bf.tar.gz) have changed as well.
+
+
+* STYLE AND MORE:
+
+Aside from testing the proper functionality of your code, we will also
+evaluate the quality of your code.  Be sure to use a consistent style, well
+documented, and break your code into separate functions and/or source files
+as it makes sense.
+
+To be sure your code is very clean, it must compile with "gcc -Wall -Werror"
+without any errors or warnings!
+
+If the various sources you use require common definitions, then do not
+duplicate the definitions.  Make use of C's code-sharing facilities.
+
+You must include a README file with this and any assignment.  The README
+file should describe what you did, what approach you took, results of any
+measurements you made, which files are included in your submission and what
+they are for, etc.  Feel free to include any other information you think is
+helpful to us in this README; it can only help your grade.
+
+
+* SUBMISSION
+
+You will need to submit all of your sources, headers, scripts, Makefiles,
+and README.  Submission is accepted via GIT only!
+
+PLEASE test your submission before submitting it, by checking it out in a
+separate directory, compiling it cleanly, and testing it again.  DO NOT make
+the common mistake of writing code until the very last minute, and then
+trying to figure out how to use GIT and skipping the testing of what you
+submitted.  You will lose valuable points if you do not get to submit on
+time or if your submission is incomplete!!!
+
+(General GIT submission guidelines are available on the class Web site.)
+
+
+* EXTRA CREDIT (OPTIONAL FOR UNDERGRADUATE STUDENTS)
+
+This extra credit is worth a total of 10 extra points (the main assignment
+is worth 100 points).
+
+[A] 1 point.
+
+Add an option called -s (safe) which will cause the program to prompt for
+the user password twice (not just once), to ensure that the password was typed
+correctly.  If the passwords didn't match, abort with an appropriate error.
+
+[B] 2 points.
+
+Add another option -i which will utilize the Initialization Vector (IV) part
+of the cipher.  Without having to know much about the IV, it is useful to
+understand that setting it to a different value each time you encrypt or
+decrypt a chunk of bytes, produces stronger encryption that is harder to
+break.  A common way to set the 8 bytes of the IV is as follows:
+
+- first 4 bytes are the index of the page (or page number) that you are
+  encrypting or decrypting (e.g., on an i386 system with a 4096-byte page
+  size, bytes 0-4095 are in page 0, bytes 4096-8191 are in page 1, etc.).
+
+- set the remaining 4 bytes to some non-zero, but fixed value.
+
+[C] 3 points.
+
+Add another option -m to the cipher program.  This option, when used, will
+tell the program to use the mmap() system call to map the two files into the
+process's memory.  When you use mmap(), you do not need to explicitly read
+and/or write the files into your program; mmap() maps files into your
+process address space and the files appear just like any large array of
+characters which you can dereference or modify.  Mmap-based programs are
+usually faster than using plain read/write.
+
+Note that mmap(2) will not be the only system call you'll need to use.  See
+the man pages for munmap(2).
+
+[D] 4 points.
+
+Add another option -E which will echo a number of asterisks each time a user
+presses a key.  It is common to display one '*' character for each key
+press, but even that is not secure enough because someone standing over your
+shoulder can figure out at least how long is your password.  A better way is
+to print a random number of asterisks (usually 1-4) for each key press.
+Note that you will need to write a different version of getpass() to achieve
+this, and use some Terminal I/O functions (tty ioctls).  Feel free to seek
+out the code for getpass() or an alternate function, and use that instead.
+
+Good luck.
+
+* ChangeLog
+
+v1: initial draft.
